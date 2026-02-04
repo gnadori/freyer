@@ -97,45 +97,45 @@ function setupEventListeners() {
         });
     }
 
-});
 
-if (Elements.cancelBtn) {
-    Elements.cancelBtn.addEventListener('click', () => {
-        // If we were editing, go back to detail. If new, go back to empty/list
-        if (AppState.originalName) {
-            // Cancel edit -> go back to viewing that concept
-            AppState.selectedConceptId = AppState.originalName;
-            AppState.view = 'detail';
-        } else {
-            // Cancel create -> go back to what we had (or empty)
-            AppState.view = AppState.selectedConceptId ? 'detail' : 'empty';
-        }
-        AppState.isEditing = false;
-        AppState.originalName = null;
-        updateView();
-    });
-}
 
-// Form Submission
-if (Elements.form) {
-    Elements.form.addEventListener('submit', handleFormSubmit);
-}
+    if (Elements.cancelBtn) {
+        Elements.cancelBtn.addEventListener('click', () => {
+            // If we were editing, go back to detail. If new, go back to empty/list
+            if (AppState.originalName) {
+                // Cancel edit -> go back to viewing that concept
+                AppState.selectedConceptId = AppState.originalName;
+                AppState.view = 'detail';
+            } else {
+                // Cancel create -> go back to what we had (or empty)
+                AppState.view = AppState.selectedConceptId ? 'detail' : 'empty';
+            }
+            AppState.isEditing = false;
+            AppState.originalName = null;
+            updateView();
+        });
+    }
 
-// Search
-if (Elements.searchInput) {
-    Elements.searchInput.addEventListener('input', (e) => {
-        renderSidebar(e.target.value);
-    });
-}
+    // Form Submission
+    if (Elements.form) {
+        Elements.form.addEventListener('submit', handleFormSubmit);
+    }
 
-// Import/Export
-if (Elements.importBtn && Elements.csvInput) {
-    Elements.importBtn.addEventListener('click', () => Elements.csvInput.click());
-    Elements.csvInput.addEventListener('change', handleCSVImport);
-}
-if (Elements.exportBtn) {
-    Elements.exportBtn.addEventListener('click', handleCSVExport);
-}
+    // Search
+    if (Elements.searchInput) {
+        Elements.searchInput.addEventListener('input', (e) => {
+            renderSidebar(e.target.value);
+        });
+    }
+
+    // Import/Export
+    if (Elements.importBtn && Elements.csvInput) {
+        Elements.importBtn.addEventListener('click', () => Elements.csvInput.click());
+        Elements.csvInput.addEventListener('change', handleCSVImport);
+    }
+    if (Elements.exportBtn) {
+        Elements.exportBtn.addEventListener('click', handleCSVExport);
+    }
 }
 
 // --- Logic functions ---
