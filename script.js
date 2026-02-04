@@ -44,21 +44,38 @@ const Elements = {
 
 // --- Initialization ---
 function init() {
-    setupEventListeners();
-    renderSidebar();
-    updateView();
+    try {
+        console.log('App initializing...');
+        setupEventListeners();
+        renderSidebar();
+        updateView();
+        console.log('App initialized successfully.');
+    } catch (err) {
+        console.error('Initialization error:', err);
+        alert('Hiba történt az alkalmazás indításakor: ' + err.message);
+    }
 }
 
 // --- Event Listeners ---
 function setupEventListeners() {
     // Navigation
-    Elements.addBtn.addEventListener('click', () => {
-        AppState.view = 'form';
-        AppState.selectedConceptId = null;
-        Elements.form.reset();
-        updateView();
-        renderSidebar(); // to clear selection highlight
-    });
+    if (Elements.addBtn) {
+        Elements.addBtn.addEventListener('click', () => {
+            console.log('Add button clicked');
+            try {
+                AppState.view = 'form';
+                AppState.selectedConceptId = null;
+                if (Elements.form) Elements.form.reset();
+                updateView();
+                renderSidebar(); // to clear selection highlight
+                console.log('View switched to form');
+            } catch (err) {
+                console.error('Error handling add button:', err);
+            }
+        });
+    } else {
+        console.error('Add button element not found!');
+    }
 
     Elements.cancelBtn.addEventListener('click', () => {
         AppState.view = AppState.selectedConceptId ? 'detail' : 'empty';
