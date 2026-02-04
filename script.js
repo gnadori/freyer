@@ -465,13 +465,6 @@ function showElement(el) {
 // Start
 init();
 
-// --- State Management ---
-const AppState = {
-    concepts: [],
-    selectedConceptId: null, // We'll use the Name as ID for simplicity, or generate UUIDs
-    view: 'empty' // 'empty', 'detail', 'form'
-};
-
 // --- DOM Elements ---
 const Elements = {
     csvInput: document.getElementById('csvInput'),
