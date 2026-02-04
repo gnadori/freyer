@@ -392,5 +392,20 @@ function updateView() {
     // @media (min-width: 769px) { #backBtn { display: none !important; } }
 }
 
+// --- Helpers ---
+function hideElement(el) {
+    if (el) {
+        el.hidden = true;
+        el.style.display = 'none';
+    }
+}
+
+function showElement(el) {
+    if (el) {
+        el.hidden = false;
+        el.style.display = ''; // Revert to stylesheet default (flex/block/grid)
+    }
+}
+
 // Start
 init();
