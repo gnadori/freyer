@@ -109,6 +109,17 @@ button {
     color: var(--text-main);
 }
 
+#backBtn {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    #backBtn {
+        display: inline-flex;
+        /* Will only show if [hidden] is removed */
+    }
+}
+
 /* Main Content */
 .main-content {
     display: flex;

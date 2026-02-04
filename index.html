@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="hu">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,34 +10,49 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="app-container">
         <header class="app-header">
             <div class="logo">
+                <button id="backBtn" class="btn btn-text" hidden style="margin-right: 0.5rem; padding: 0.25rem;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 12H5" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M12 19L5 12L12 5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
                 <h1>Freyer Könyvtár</h1>
             </div>
             <div class="actions">
                 <input type="file" id="csvInput" accept=".csv" hidden>
                 <button id="importBtn" class="btn btn-secondary">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="icon">
-                        <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M20 21H4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M20 21H4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
                     </svg>
                     Importálás
                 </button>
                 <button id="addBtn" class="btn btn-primary">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="icon">
-                        <path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
                     </svg>
                     Új hozzáadása
                 </button>
                 <button id="exportBtn" class="btn btn-secondary">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="icon">
-                        <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M7 10L12 5L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M20 21H4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M7 10L12 5L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M20 21H4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
                     </svg>
                     Exportálás
                 </button>
@@ -97,7 +113,8 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label for="defInput">Meghatározás (Kötelező)</label>
-                                <textarea id="defInput" required placeholder="A fogalom pontos definíciója..."></textarea>
+                                <textarea id="defInput" required
+                                    placeholder="A fogalom pontos definíciója..."></textarea>
                             </div>
                             <div class="form-group">
                                 <label for="charInput">Jellemzők (Kötelező)</label>
@@ -123,4 +140,5 @@
     </div>
     <script src="script.js"></script>
 </body>
+
 </html>

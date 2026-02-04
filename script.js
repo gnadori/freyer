@@ -58,6 +58,12 @@ function init() {
 
 // --- Event Listeners ---
 function setupEventListeners() {
+    Elements.backBtn = document.getElementById('backBtn');
+
+    // Check elements
+    if (!Elements.backBtn) console.error('Back button not found');
+    if (!Elements.csvInput) console.error('CSV Input not found');
+
     // Navigation
     if (Elements.addBtn) {
         Elements.addBtn.addEventListener('click', () => {
@@ -77,7 +83,17 @@ function setupEventListeners() {
         console.error('Add button element not found!');
     }
 
+    if (Elements.backBtn) {
+        Elements.backBtn.addEventListener('click', () => {
+            AppState.view = 'empty'; // "empty" acts as "list" on mobile
+            AppState.selectedConceptId = null;
+            updateView();
+            renderSidebar();
+        });
+    }
+
     Elements.cancelBtn.addEventListener('click', () => {
+        // If we were editing, go back to detail. If new, go back to empty/list
         AppState.view = AppState.selectedConceptId ? 'detail' : 'empty';
         updateView();
     });
@@ -321,15 +337,26 @@ function renderSidebar(filterText = '') {
 }
 
 function updateView() {
-    // Hide all
+    // Hide all panels first
     Elements.emptyState.hidden = true;
     Elements.frayerView.hidden = true;
     Elements.conceptForm.hidden = true;
 
+    const mainContent = document.querySelector('.main-content');
+    const isMobile = window.innerWidth <= 768; // Simple check, though CSS is source of truth
+
+    // Logic for Mobile Master-Detail
+    // If view is 'detail' or 'form', we are in "Detail Mode" (show content, hide sidebar)
+    // If view is 'empty', we are in "List Mode" on mobile (show sidebar, hide content)
+
+    let isDetailMode = false;
+
     if (AppState.view === 'empty') {
         Elements.emptyState.hidden = false;
+        isDetailMode = false;
     } else if (AppState.view === 'form') {
         Elements.conceptForm.hidden = false;
+        isDetailMode = true;
     } else if (AppState.view === 'detail') {
         const concept = AppState.concepts.find(c => c.name === AppState.selectedConceptId);
         if (concept) {
@@ -339,12 +366,30 @@ function updateView() {
             Elements.viewExamples.textContent = concept.examples;
             Elements.viewNonExamples.textContent = concept.nonExamples;
             Elements.frayerView.hidden = false;
+            isDetailMode = true;
         } else {
-            // Fallback if deleted or not found
             AppState.view = 'empty';
             Elements.emptyState.hidden = false;
+            isDetailMode = false;
         }
     }
+
+    // Toggle Mobile CSS Classes
+    if (isDetailMode) {
+        mainContent.classList.add('mobile-detail-active');
+        // Show back button only on mobile (effectively handled by CSS usually, but we have a hidden attribute)
+        if (Elements.backBtn) Elements.backBtn.hidden = false; // logic simplified: show it if in detail mode. CSS can hide it on desktop.
+    } else {
+        mainContent.classList.remove('mobile-detail-active');
+        if (Elements.backBtn) Elements.backBtn.hidden = true;
+    }
+
+    // Desktop override: Back button should probably strictly be hidden on desktop via CSS 
+    // but the [hidden] attribute overrides CSS display:none usually unless !important.
+    // We added [hidden] { display: none !important } in CSS.
+    // So to show it, we remove hidden. 
+    // To ensure it's hidden on desktop even if we remove [hidden], we need CSS:
+    // @media (min-width: 769px) { #backBtn { display: none !important; } }
 }
 
 // Start
