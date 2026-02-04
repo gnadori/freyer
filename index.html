@@ -9,7 +9,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 
 <body>
@@ -80,6 +79,18 @@
 
                 <!-- Template for Frayer Model View -->
                 <div id="frayerView" class="frayer-view" hidden>
+                    <div class="view-header-actions"
+                        style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+                        <button id="editBtn" class="btn btn-secondary"
+                            style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                            Szerkesztés
+                        </button>
+                    </div>
                     <div class="frayer-grid">
                         <div class="frayer-cell definition">
                             <h4>Meghatározás</h4>
