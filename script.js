@@ -47,12 +47,149 @@ function init() {
     try {
         console.log('App initializing...');
         setupEventListeners();
+        setupEditors(); // Initialize toolbars
         renderSidebar();
         updateView();
         console.log('App initialized successfully.');
     } catch (err) {
         console.error('Initialization error:', err);
         alert('Hiba történt az alkalmazás indításakor: ' + err.message);
+    }
+}
+
+// --- Editor Logic ---
+function setupEditors() {
+    // Wrap textareas in editor-wrapper and prepend toolbar
+    const textareas = [
+        Elements.defInput,
+        Elements.charInput,
+        Elements.exInput,
+        Elements.nonExInput
+    ];
+
+    const actions = [
+        { label: 'B', title: 'Félkövér', prefix: '**', suffix: '**' },
+        { label: 'I', title: 'Dőlt', prefix: '*', suffix: '*' },
+        { label: 'Lista', title: 'Felsorolás', prefix: '\n- ', suffix: '' },
+        { label: 'x²', title: 'Felső index', prefix: '<sup>', suffix: '</sup>' },
+        { label: 'x₂', title: 'Alsó index', prefix: '<sub>', suffix: '</sub>' }
+    ];
+
+    textareas.forEach(textarea => {
+        if (!textarea) return;
+
+        // Check if already set up
+        if (textarea.parentElement.classList.contains('editor-wrapper')) return;
+
+        // Create Wrapper
+        const wrapper = document.createElement('div');
+        wrapper.className = 'editor-wrapper';
+
+        // Create Toolbar
+        const toolbar = document.createElement('div');
+        toolbar.className = 'editor-toolbar';
+
+        actions.forEach(action => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'editor-btn';
+            btn.textContent = action.label;
+            btn.title = action.title;
+            // Prevent form submit
+            btn.onclick = (e) => {
+                e.preventDefault();
+                insertTag(textarea, action.prefix, action.suffix);
+            };
+            toolbar.appendChild(btn);
+        });
+
+        // Move textarea into wrapper
+        textarea.parentNode.insertBefore(wrapper, textarea);
+        wrapper.appendChild(toolbar);
+        wrapper.appendChild(textarea);
+    });
+}
+
+function insertTag(textarea, prefix, suffix) {
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selection = text.substring(start, end);
+
+    // Logic: if selection is empty, just insert tags and cursor in between
+    // If selection exists, wrap it
+
+    const replacement = prefix + selection + suffix;
+    textarea.value = text.substring(0, start) + replacement + text.substring(end);
+
+    textarea.focus();
+    // Move cursor to expected position (after prefix, or after end if just wrapping)
+    if (start === end) {
+        textarea.selectionEnd = start + prefix.length;
+    } else {
+        textarea.selectionEnd = end + prefix.length + suffix.length;
+    }
+}
+
+// --- Rendering with Markdown ---
+// ... (rest of the code)
+
+function renderMarkdown(text) {
+    if (!text) return '';
+    try {
+        // marked.parse might return a promise in newer versions if async is on, but CDN defaults usually sync.
+        // Check docs: modern Marked is synchronous by default unless using async extensions.
+        // We'll trust standard config.
+        return marked.parse(text);
+    } catch (e) {
+        console.error('Markdown error:', e);
+        return text;
+    }
+}
+
+function updateView() {
+    // Explicitly hide using style to override any CSS specificity issues
+    hideElement(Elements.emptyState);
+    hideElement(Elements.frayerView);
+    hideElement(Elements.conceptForm);
+
+    const mainContent = document.querySelector('.main-content');
+
+    // Logic for Mobile Master-Detail
+    let isDetailMode = false;
+
+    if (AppState.view === 'empty') {
+        showElement(Elements.emptyState);
+        isDetailMode = false;
+    } else if (AppState.view === 'form') {
+        showElement(Elements.conceptForm);
+        isDetailMode = true;
+    } else if (AppState.view === 'detail') {
+        const concept = AppState.concepts.find(c => c.name === AppState.selectedConceptId);
+        if (concept) {
+            Elements.viewName.textContent = concept.name;
+            // Use renderMarkdown instead of textContent, and use innerHTML
+            Elements.viewDefinition.innerHTML = renderMarkdown(concept.definition);
+            Elements.viewCharacteristics.innerHTML = renderMarkdown(concept.characteristics);
+            Elements.viewExamples.innerHTML = renderMarkdown(concept.examples);
+            Elements.viewNonExamples.innerHTML = renderMarkdown(concept.nonExamples);
+
+            showElement(Elements.frayerView);
+            isDetailMode = true;
+        } else {
+            AppState.view = 'empty';
+            showElement(Elements.emptyState);
+            isDetailMode = false;
+        }
+    }
+
+    // Toggle Mobile CSS Classes
+    if (isDetailMode) {
+        mainContent.classList.add('mobile-detail-active');
+        if (Elements.backBtn) showElement(Elements.backBtn);
+    } else {
+        mainContent.classList.remove('mobile-detail-active');
+        if (Elements.backBtn) hideElement(Elements.backBtn);
     }
 }
 
