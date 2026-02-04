@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Freyer Könyvtár</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="logo">
+                <h1>Freyer Könyvtár</h1>
+            </div>
+            <div class="actions">
+                <input type="file" id="csvInput" accept=".csv" hidden>
+                <button id="importBtn" class="btn btn-secondary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="icon">
+                        <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M20 21H4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Importálás
+                </button>
+                <button id="addBtn" class="btn btn-primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="icon">
+                        <path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Új hozzáadása
+                </button>
+                <button id="exportBtn" class="btn btn-secondary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="icon">
+                        <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M7 10L12 5L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M20 21H4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Exportálás
+                </button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <aside class="sidebar">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Keresés...">
+                </div>
+                <ul id="conceptList" class="concept-list">
+                    <!-- Concept items will be populated here -->
+                </ul>
+            </aside>
+
+            <section id="contentPanel" class="content-panel">
+                <!-- Views will be injected here: Empty State, Frayer View, or Form -->
+                <div id="emptyState" class="empty-state">
+                    <div class="empty-illustration">📚</div>
+                    <h3>Válasszon egy fogalmat a megtekintéshez</h3>
+                    <p>Vagy hozzon létre egy újat a fenti gombbal.</p>
+                </div>
+
+                <!-- Template for Frayer Model View -->
+                <div id="frayerView" class="frayer-view" hidden>
+                    <div class="frayer-grid">
+                        <div class="frayer-cell definition">
+                            <h4>Meghatározás</h4>
+                            <p id="viewDefinition"></p>
+                        </div>
+                        <div class="frayer-cell characteristics">
+                            <h4>Jellemzők</h4>
+                            <p id="viewCharacteristics"></p>
+                        </div>
+                        <div class="frayer-center">
+                            <h2 id="viewName">Concept Name</h2>
+                        </div>
+                        <div class="frayer-cell examples">
+                            <h4>Példák</h4>
+                            <p id="viewExamples"></p>
+                        </div>
+                        <div class="frayer-cell non-examples">
+                            <h4>Ellenpéldák</h4>
+                            <p id="viewNonExamples"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Template for Edit/Create Form -->
+                <div id="conceptForm" class="concept-form-container" hidden>
+                    <h2>Új fogalom hozzáadása</h2>
+                    <form id="form">
+                        <div class="form-group">
+                            <label for="nameInput">Név (Kötelező)</label>
+                            <input type="text" id="nameInput" required placeholder="Pl. Négyszög">
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="defInput">Meghatározás (Kötelező)</label>
+                                <textarea id="defInput" required placeholder="A fogalom pontos definíciója..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="charInput">Jellemzők (Kötelező)</label>
+                                <textarea id="charInput" required placeholder="Lényegi tulajdonságok..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="exInput">Példák</label>
+                                <textarea id="exInput" placeholder="Konkrét példák..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="nonExInput">Ellenpéldák</label>
+                                <textarea id="nonExInput" placeholder="Ami nem tartozik ide..."></textarea>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" id="cancelBtn" class="btn btn-text">Mégse</button>
+                            <button type="submit" class="btn btn-primary">Mentés</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
