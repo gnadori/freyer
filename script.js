@@ -9,7 +9,8 @@ const AppState = {
     selectedConceptId: null, // We'll use the Name as ID for simplicity
     view: 'empty', // 'empty', 'detail', 'form'
     isEditing: false, // Track if we are editing an existing concept
-    originalName: null // Track original name during edit to handle renames
+    originalName: null, // Track original name during edit to handle renames
+    hasUnsavedChanges: false // Track if data has been modified without export
 };
 
 // --- DOM Elements ---
@@ -128,6 +129,14 @@ function setupEventListeners() {
         });
     }
 
+    // Unload Warning
+    window.addEventListener('beforeunload', (e) => {
+        if (AppState.hasUnsavedChanges) {
+            e.preventDefault();
+            e.returnValue = ''; // Standard for modern browsers
+        }
+    });
+
     // Import/Export
     if (Elements.importBtn && Elements.csvInput) {
         Elements.importBtn.addEventListener('click', () => Elements.csvInput.click());
@@ -238,6 +247,9 @@ function handleFormSubmit(e) {
     // Sort
     sortConcepts();
 
+    // Mark as unsaved
+    AppState.hasUnsavedChanges = true;
+
     // Select and View
     AppState.selectedConceptId = newConcept.name;
     AppState.view = 'detail';
@@ -304,6 +316,7 @@ function parseCSV(csvText) {
 
     if (count > 0) {
         sortConcepts();
+        AppState.hasUnsavedChanges = true;
         renderSidebar();
         alert(`${count} fogalom sikeresen importálva.`);
     } else {
@@ -383,6 +396,9 @@ function handleCSVExport() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
+    // Mark as saved
+    AppState.hasUnsavedChanges = false;
 }
 
 // --- Rendering ---
