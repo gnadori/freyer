@@ -79,7 +79,8 @@ const Elements = {
     charInput: document.getElementById('charInput'),
     exInput: document.getElementById('exInput'),
     nonExInput: document.getElementById('nonExInput'),
-    cancelBtn: document.getElementById('cancelBtn')
+    cancelBtn: document.getElementById('cancelBtn'),
+    deleteBtn: document.getElementById('deleteBtn') // New
 };
 
 // --- Auth Service ---
@@ -233,6 +234,10 @@ function setupEventListeners() {
         });
     }
 
+    if (Elements.deleteBtn) {
+        Elements.deleteBtn.addEventListener('click', handleDelete);
+    }
+
     // Form Submission
     if (Elements.form) {
         Elements.form.addEventListener('submit', handleFormSubmit);
@@ -278,6 +283,7 @@ function startCreate() {
 
     if (Elements.form) Elements.form.reset();
     if (Elements.formTitle) Elements.formTitle.textContent = "Új fogalom hozzáadása";
+    if (Elements.deleteBtn) Elements.deleteBtn.hidden = true; // No delete in create mode
 
     updateView();
     renderSidebar();
@@ -298,9 +304,34 @@ function startEdit() {
     Elements.exInput.value = concept.examples;
     Elements.nonExInput.value = concept.nonExamples;
 
+    if (Elements.deleteBtn) Elements.deleteBtn.hidden = false; // Show delete
     if (Elements.formTitle) Elements.formTitle.textContent = "Fogalom szerkesztése";
 
     updateView();
+}
+
+async function handleDelete() {
+    if (!AppState.user || !AppState.isEditing || !AppState.originalName) return;
+
+    if (!confirm(`Biztosan törölni szeretné a(z) "${AppState.originalName}" fogalmat? A művelet nem visszavonható.`)) return;
+
+    try {
+        const concept = AppState.concepts.find(c => c.name === AppState.originalName);
+        if (concept) {
+            const userConceptsRef = collection(db, 'users', AppState.user.uid, 'concepts');
+            await deleteDoc(doc(userConceptsRef, concept.id));
+
+            // Reset UI
+            AppState.view = 'empty';
+            AppState.selectedConceptId = null;
+            AppState.isEditing = false;
+            AppState.originalName = null;
+            updateView();
+        }
+    } catch (err) {
+        console.error("Delete error:", err);
+        alert("Hiba a törlés során: " + err.message);
+    }
 }
 
 async function handleFormSubmit(e) {
