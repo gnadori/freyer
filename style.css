@@ -248,20 +248,10 @@ button {
     line-height: 1.6;
 }
 
-/* Adjust layout for bottom cells (Examples, Non-examples) 
-   Move headers to bottom to prevent overlap with center bubble */
-.frayer-cell.examples,
-.frayer-cell.non-examples {
-    flex-direction: column-reverse;
-}
-
-.frayer-cell.examples h4,
+/* Adjust layout - Align headers to outer corners to avoid center overlap */
+.frayer-cell.characteristics h4,
 .frayer-cell.non-examples h4 {
-    margin-bottom: 0;
-    border-bottom: none;
-    border-top: 2px solid #f3f4f6;
-    padding-top: 0.5rem;
-    margin-top: 0.75rem;
+    text-align: right;
 }
 
 /* Center Bubble */
