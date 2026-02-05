@@ -120,7 +120,8 @@ function initAuth() {
         Elements.loginBtn.addEventListener('click', () => {
             const provider = new OAuthProvider('microsoft.com');
             provider.setCustomParameters({
-                prompt: 'select_account'
+                prompt: 'select_account',
+                tenant: 'fb6ed267-0587-4bca-8f76-c672df6eb313'
             });
             signInWithPopup(auth, provider)
                 .then((result) => {
