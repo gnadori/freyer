@@ -3,21 +3,53 @@
  * Handles state management, UI rendering, and user interactions.
  */
 
+// Import Firebase (Modular SDK from CDN)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signInWithPopup, signOut, onAuthStateChanged, OAuthProvider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+// --- Configuration ---
+const firebaseConfig = {
+    apiKey: "AIzaSyDZjpkS6LWHg-Snp5TweDacV2NZ8IJ99jg",
+    authDomain: "freyerkonyvtar.firebaseapp.com",
+    projectId: "freyerkonyvtar",
+    storageBucket: "freyerkonyvtar.firebasestorage.app",
+    messagingSenderId: "131738249131",
+    appId: "1:131738249131:web:b4611367be8a7279ae14ee",
+    measurementId: "G-EEMF28VET7"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
 // --- State Management ---
 const AppState = {
-    concepts: [],
-    selectedConceptId: null, // We'll use the Name as ID for simplicity
+    user: null, // Logged in user
+    concepts: [], // Synced from Firestore
+    selectedConceptId: null, // Name is still used as ID for UI selection
     view: 'empty', // 'empty', 'detail', 'form'
-    isEditing: false, // Track if we are editing an existing concept
-    originalName: null, // Track original name during edit to handle renames
-    hasUnsavedChanges: false // Track if data has been modified without export
+    isEditing: false,
+    originalName: null,
+    hasUnsavedChanges: false, // For local edits before saving? In Firestore save is immediate, so mainly for form field changes.
+    unsubscribe: null // Firestore listener
 };
 
 // --- DOM Elements ---
 const Elements = {
+    // Auth UI
+    loginOverlay: document.getElementById('loginOverlay'),
+    loginBtn: document.getElementById('loginBtn'),
+    appContainer: document.getElementById('appContainer'),
+    userProfile: document.getElementById('userProfile'),
+    userName: document.getElementById('userName'),
+    logoutBtn: document.getElementById('logoutBtn'),
+
+    // App UI
     csvInput: document.getElementById('csvInput'),
-    importBtn: document.getElementById('importBtn'),
-    exportBtn: document.getElementById('exportBtn'),
+    importBtn: document.getElementById('importBtn'), /* Enabled */
+    exportBtn: document.getElementById('exportBtn'), /* Enabled */
     addBtn: document.getElementById('addBtn'),
 
     searchInput: document.getElementById('searchInput'),
@@ -27,7 +59,7 @@ const Elements = {
     emptyState: document.getElementById('emptyState'),
     frayerView: document.getElementById('frayerView'),
 
-    // Edit Button (New)
+    // Edit Button
     editBtn: document.getElementById('editBtn'),
 
     conceptForm: document.getElementById('conceptForm'),
@@ -41,7 +73,7 @@ const Elements = {
 
     // Form
     form: document.getElementById('form'),
-    formTitle: document.querySelector('#conceptForm h2'), // To change title to "Szerkesztés"
+    formTitle: document.querySelector('#conceptForm h2'),
     nameInput: document.getElementById('nameInput'),
     defInput: document.getElementById('defInput'),
     charInput: document.getElementById('charInput'),
@@ -50,13 +82,107 @@ const Elements = {
     cancelBtn: document.getElementById('cancelBtn')
 };
 
+// --- Auth Service ---
+function initAuth() {
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            // Logged In
+            console.log('User logged in:', user.displayName);
+            AppState.user = user;
+
+            // UI Switch
+            if (Elements.loginOverlay) Elements.loginOverlay.hidden = true;
+            if (Elements.appContainer) Elements.appContainer.hidden = false;
+            if (Elements.userProfile) Elements.userProfile.hidden = false;
+            if (Elements.userName) Elements.userName.textContent = user.displayName || user.email;
+
+            // Load Data
+            initDataListener();
+        } else {
+            // Logged Out
+            console.log('User logged out');
+            AppState.user = null;
+
+            // UI Switch
+            if (Elements.loginOverlay) Elements.loginOverlay.hidden = false;
+            if (Elements.appContainer) Elements.appContainer.hidden = true;
+
+            // Cleanup: clear data and unsubscribe
+            AppState.concepts = [];
+            if (AppState.unsubscribe) {
+                AppState.unsubscribe();
+                AppState.unsubscribe = null;
+            }
+        }
+    });
+
+    if (Elements.loginBtn) {
+        Elements.loginBtn.addEventListener('click', () => {
+            const provider = new OAuthProvider('microsoft.com');
+            provider.setCustomParameters({
+                prompt: 'select_account'
+            });
+            signInWithPopup(auth, provider)
+                .then((result) => {
+                    // Success handled by onAuthStateChanged
+                })
+                .catch((error) => {
+                    console.error('Login error:', error);
+                    alert('Hiba a belépés során: ' + error.message);
+                });
+        });
+    }
+
+    if (Elements.logoutBtn) {
+        Elements.logoutBtn.addEventListener('click', () => {
+            signOut(auth);
+        });
+    }
+}
+
+// --- Data Service (Firestore) ---
+function initDataListener() {
+    if (!AppState.user) return;
+
+    // Safety check: unsubscribe previous
+    if (AppState.unsubscribe) AppState.unsubscribe();
+
+    const userConceptsRef = collection(db, 'users', AppState.user.uid, 'concepts');
+    const q = query(userConceptsRef, orderBy('name'));
+
+    console.log('Listening to concepts in Firestore...');
+    AppState.unsubscribe = onSnapshot(q, (snapshot) => {
+        const concepts = [];
+        snapshot.forEach((doc) => {
+            concepts.push({ id: doc.id, ...doc.data() });
+        });
+
+        AppState.concepts = concepts;
+        renderSidebar(Elements.searchInput.value);
+
+        // Restore view state if needed, or handle deletion while viewing
+        if (AppState.selectedConceptId) {
+            const stillExists = concepts.find(c => c.name === AppState.selectedConceptId);
+            if (!stillExists && AppState.view === 'detail') {
+                // Concept was deleted remotely
+                AppState.view = 'empty';
+                updateView();
+            } else if (stillExists && AppState.view === 'detail') {
+                // Concept updated remotely, refresh view
+                updateView();
+            }
+        }
+    }, (error) => {
+        console.error("Firestore error:", error);
+    });
+}
+
 // --- Initialization ---
 function init() {
     try {
         console.log('App initializing...');
+        initAuth();
         setupEventListeners();
-        renderSidebar();
-        updateView();
         console.log('App initialized successfully.');
     } catch (err) {
         console.error('Initialization error:', err);
@@ -68,14 +194,9 @@ function init() {
 function setupEventListeners() {
     Elements.backBtn = document.getElementById('backBtn');
 
-    // Check elements
-    if (!Elements.backBtn) console.error('Back button not found');
-    if (!Elements.csvInput) console.error('CSV Input not found');
-
     // Navigation: Add (New)
     if (Elements.addBtn) {
         Elements.addBtn.addEventListener('click', () => {
-            console.log('Add button clicked');
             startCreate();
         });
     }
@@ -83,7 +204,6 @@ function setupEventListeners() {
     // Navigation: Edit
     if (Elements.editBtn) {
         Elements.editBtn.addEventListener('click', () => {
-            console.log('Edit button clicked');
             startEdit();
         });
     }
@@ -98,17 +218,12 @@ function setupEventListeners() {
         });
     }
 
-
-
     if (Elements.cancelBtn) {
         Elements.cancelBtn.addEventListener('click', () => {
-            // If we were editing, go back to detail. If new, go back to empty/list
             if (AppState.originalName) {
-                // Cancel edit -> go back to viewing that concept
                 AppState.selectedConceptId = AppState.originalName;
                 AppState.view = 'detail';
             } else {
-                // Cancel create -> go back to what we had (or empty)
                 AppState.view = AppState.selectedConceptId ? 'detail' : 'empty';
             }
             AppState.isEditing = false;
@@ -129,11 +244,17 @@ function setupEventListeners() {
         });
     }
 
-    // Unload Warning
+    // Unload Warning - Only check dirty forms
+    // Since saves are now async to DB, "unsaved" mainly applies to open form being edited
     window.addEventListener('beforeunload', (e) => {
-        if (AppState.hasUnsavedChanges) {
+        // If form is dirty (we could track dirty state more granulary, 
+        // but for now user explicitly saves to DB. 
+        // We can just rely on standard behavior or keep hasUnsavedChanges if we want to track 'session' changes.
+        // Actually, with Cloud sync, checking if 'unsaved' is tricky. 
+        // Let's protect ONLY if user is currently editing a form.
+        if (AppState.view === 'form' && (Elements.nameInput.value || Elements.defInput.value)) {
             e.preventDefault();
-            e.returnValue = ''; // Standard for modern browsers
+            e.returnValue = '';
         }
     });
 
@@ -158,7 +279,7 @@ function startCreate() {
     if (Elements.formTitle) Elements.formTitle.textContent = "Új fogalom hozzáadása";
 
     updateView();
-    renderSidebar(); // clear highlight
+    renderSidebar();
 }
 
 function startEdit() {
@@ -181,162 +302,150 @@ function startEdit() {
     updateView();
 }
 
-function handleFormSubmit(e) {
+async function handleFormSubmit(e) {
     e.preventDefault();
+    if (!AppState.user) return;
 
     const newConcept = {
         name: Elements.nameInput.value.trim(),
         definition: Elements.defInput.value.trim(),
         characteristics: Elements.charInput.value.trim(),
         examples: Elements.exInput.value.trim(),
-        nonExamples: Elements.nonExInput.value.trim()
+        nonExamples: Elements.nonExInput.value.trim(),
+        updatedAt: new Date()
     };
 
-    // If editing and name changed, check collision
-    const nameChanged = AppState.isEditing && (newConcept.name.toLowerCase() !== AppState.originalName.toLowerCase());
+    const userConceptsRef = collection(db, 'users', AppState.user.uid, 'concepts');
 
-    // Check if distinct (ignoring self if editing)
-    const existingIndex = AppState.concepts.findIndex(c => c.name.toLowerCase() === newConcept.name.toLowerCase());
-
-    if (existingIndex >= 0) {
-        // Collision found
-        const isSelf = AppState.isEditing && (AppState.concepts[existingIndex].name.toLowerCase() === AppState.originalName.toLowerCase());
-
-        if (!isSelf) {
-            // Collides with ANOTHER concept
-            if (!confirm(`A(z) "${newConcept.name}" nevű fogalom már létezik. Felülírja?`)) {
+    try {
+        if (AppState.isEditing) {
+            // EDIT MODE
+            const originalDoc = AppState.concepts.find(c => c.name === AppState.originalName);
+            if (!originalDoc) {
+                alert("Hiba: Nem található az eredeti dokumentum.");
                 return;
             }
-            // Overwrite strategy: remove the old one (existingIndex) and we'll push/update later?
-            // Actually simplest is: if collision, we update the existing one.
-            // If we were editing A and renamed to B (which exists), we essentially merge A into B? 
-            // Or just overwrite B with A's new data.
-            // And we must remove A.
-        }
-    }
 
-    if (AppState.isEditing) {
-        // Find the original and update it
-        // Or simpler: Remove original, then push new (handling collisions implies overwrite)
+            // Rename check
+            if (newConcept.name !== AppState.originalName) {
+                const collision = AppState.concepts.find(c => c.name.toLowerCase() === newConcept.name.toLowerCase());
+                if (collision) {
+                    if (!confirm(`A(z) "${newConcept.name}" nevű fogalom már létezik. Felülírja?`)) return;
+                    await deleteDoc(doc(userConceptsRef, collision.id));
+                }
+            }
+            await updateDoc(doc(userConceptsRef, originalDoc.id), newConcept);
 
-        // 1. Remove original
-        const originalIndex = AppState.concepts.findIndex(c => c.name === AppState.originalName);
-        if (originalIndex !== -1) {
-            AppState.concepts.splice(originalIndex, 1);
-        }
-
-        // 2. Remove any collision target (if we renamed to an existing name)
-        const collisionIndex = AppState.concepts.findIndex(c => c.name.toLowerCase() === newConcept.name.toLowerCase());
-        if (collisionIndex !== -1) {
-            AppState.concepts.splice(collisionIndex, 1);
-        }
-
-        // 3. Add new
-        AppState.concepts.push(newConcept);
-
-    } else {
-        // New Create
-        if (existingIndex >= 0) {
-            // Overwrite existing
-            AppState.concepts[existingIndex] = newConcept;
         } else {
-            AppState.concepts.push(newConcept);
+            // CREATE MODE
+            const collision = AppState.concepts.find(c => c.name.toLowerCase() === newConcept.name.toLowerCase());
+            if (collision) {
+                if (!confirm(`A(z) "${newConcept.name}" nevű fogalom már létezik. Felülírja?`)) return;
+                await updateDoc(doc(userConceptsRef, collision.id), newConcept);
+            } else {
+                newConcept.createdAt = new Date();
+                await addDoc(userConceptsRef, newConcept);
+            }
         }
+
+        // Reset View
+        AppState.selectedConceptId = newConcept.name;
+        AppState.view = 'detail';
+        AppState.isEditing = false;
+        AppState.originalName = null;
+        updateView();
+
+    } catch (err) {
+        console.error("Save error:", err);
+        alert("Hiba a mentés során: " + err.message);
     }
-
-    // Sort
-    sortConcepts();
-
-    // Mark as unsaved
-    AppState.hasUnsavedChanges = true;
-
-    // Select and View
-    AppState.selectedConceptId = newConcept.name;
-    AppState.view = 'detail';
-    AppState.isEditing = false;
-    AppState.originalName = null;
-
-    renderSidebar();
-    updateView();
 }
 
-function sortConcepts() {
-    AppState.concepts.sort((a, b) => a.name.localeCompare(b.name, 'hu'));
-}
-
-// --- Import/Export ---
+// --- Import/Export (Cloud Version) ---
 function handleCSVImport(e) {
     const file = e.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = function (event) {
-        const text = event.target.result;
-        parseCSV(text);
+        confirmAndUploadCSV(event.target.result);
     };
     reader.readAsText(file, 'UTF-8');
     Elements.csvInput.value = ''; // Reset
 }
 
+async function confirmAndUploadCSV(csvText) {
+    if (!AppState.user) return;
+
+    if (!confirm("Az importálás feltölti az adatokat a felhőbe. A már létező azonos nevű fogalmakat kihagyja. Folytatja?")) return;
+
+    const list = parseCSV(csvText);
+    if (list.length === 0) {
+        alert("Nem találtam adatokat a fájlban.");
+        return;
+    }
+
+    const userConceptsRef = collection(db, 'users', AppState.user.uid, 'concepts');
+    let addedCount = 0;
+    let skippedCount = 0;
+
+    // Batching (optional but good, though Firestore batch limit is 500. We'll do serial for simplicity to check duplicates easily against local state)
+    // Actually we can check local AppState.concepts for duplicates instantly before firing network requests.
+
+    for (const concept of list) {
+        const exists = AppState.concepts.find(c => c.name.toLowerCase() === concept.name.toLowerCase());
+        if (!exists) {
+            try {
+                await addDoc(userConceptsRef, { ...concept, createdAt: new Date() });
+                addedCount++;
+            } catch (e) {
+                console.error("Upload error for", concept.name, e);
+            }
+        } else {
+            skippedCount++;
+        }
+    }
+
+    alert(`Feltöltés kész!\nSikeresen hozzáadva: ${addedCount}\nKihagyva (már létezett): ${skippedCount}`);
+}
+
 function parseCSV(csvText) {
     const lines = csvText.split(/\r?\n/);
-    if (lines.length === 0) return;
+    if (lines.length === 0) return [];
 
-    // Detect delimiter from the first line (header)
     const firstLine = lines[0];
     const delimiter = firstLine.includes(';') ? ';' : ',';
-
-    let count = 0;
-    // Skip header if likely present
     const startIndex = firstLine.toLowerCase().includes('név') ? 1 : 0;
+    const results = [];
 
     for (let i = startIndex; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
 
-        // Simple manual parser logic reused
         const parts = parseLine(line, delimiter);
 
         if (parts.length >= 2) {
-            const concept = {
+            results.push({
                 name: parts[0] ? parts[0].trim() : "Névtelen",
                 definition: parts[1] ? parts[1].trim() : "",
                 characteristics: parts[2] ? parts[2].trim() : "",
                 examples: parts[3] ? parts[3].trim() : "",
                 nonExamples: parts[4] ? parts[4].trim() : ""
-            };
-
-            const existing = AppState.concepts.find(c => c.name.toLowerCase() === concept.name.toLowerCase());
-            if (!existing) {
-                AppState.concepts.push(concept);
-                count++;
-            }
+            });
         }
     }
-
-    if (count > 0) {
-        sortConcepts();
-        AppState.hasUnsavedChanges = true;
-        renderSidebar();
-        alert(`${count} fogalom sikeresen importálva.`);
-    } else {
-        alert("Nem sikerült új fogalmakat beolvasni.");
-    }
+    return results;
 }
 
-// Helper to parse a single CSV line
 function parseLine(text, delimiter) {
     const result = [];
     let current = '';
     let inQuotes = false;
-
     for (let i = 0; i < text.length; i++) {
         const char = text[i];
-
         if (inQuotes) {
             if (char === '"') {
                 if (i + 1 < text.length && text[i + 1] === '"') {
-                    // Double quote escape
                     current += '"';
                     i++;
                 } else {
@@ -361,17 +470,16 @@ function parseLine(text, delimiter) {
 }
 
 function handleCSVExport() {
+    // Export data from loaded State (which is synced from Cloud)
     if (AppState.concepts.length === 0) {
         alert("Nincs mit exportálni.");
         return;
     }
 
-    // BOM for Excel UTF-8 compatibility
     let csvContent = "\uFEFF";
     csvContent += "Név;Meghatározás;Jellemzők;Példák;Ellenpéldák\n";
 
     AppState.concepts.forEach(c => {
-        // Escape semicolons and newlines in fields
         const row = [
             c.name,
             c.definition,
@@ -382,7 +490,7 @@ function handleCSVExport() {
             if (field.includes(';') || field.includes('\n')) {
                 return `"${field.replace(/"/g, '""')}"`;
             }
-            return field;
+            return field || "";
         }).join(';');
 
         csvContent += row + "\n";
@@ -392,21 +500,24 @@ function handleCSVExport() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", "freyer_konyvtar.csv");
+    link.setAttribute("download", "freyer_konyvtar_felho.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
-    // Mark as saved
-    AppState.hasUnsavedChanges = false;
 }
 
+
 // --- Rendering ---
+// (Unchanged logic, just different data source which is managed by state)
+
 function renderSidebar(filterText = '') {
     Elements.conceptList.innerHTML = '';
     const filter = filterText.toLowerCase();
 
-    AppState.concepts.forEach(concept => {
+    // Sort logic handled locally for display
+    const sorted = [...AppState.concepts].sort((a, b) => a.name.localeCompare(b.name, 'hu'));
+
+    sorted.forEach(concept => {
         if (concept.name.toLowerCase().includes(filter)) {
             const li = document.createElement('li');
             li.className = 'concept-item';
@@ -421,7 +532,7 @@ function renderSidebar(filterText = '') {
                 AppState.view = 'detail';
                 AppState.isEditing = false;
                 updateView();
-                renderSidebar(filterText); // Re-render to update active state
+                renderSidebar(filterText);
             });
 
             Elements.conceptList.appendChild(li);
@@ -430,14 +541,11 @@ function renderSidebar(filterText = '') {
 }
 
 function updateView() {
-    // Explicitly hide using style to override any CSS specificity issues
     hideElement(Elements.emptyState);
     hideElement(Elements.frayerView);
     hideElement(Elements.conceptForm);
 
     const mainContent = document.querySelector('.main-content');
-
-    // Logic for Mobile Master-Detail
     let isDetailMode = false;
 
     if (AppState.view === 'empty') {
@@ -450,12 +558,10 @@ function updateView() {
         const concept = AppState.concepts.find(c => c.name === AppState.selectedConceptId);
         if (concept) {
             Elements.viewName.textContent = concept.name;
-            // Plain text viewing
             Elements.viewDefinition.textContent = concept.definition;
             Elements.viewCharacteristics.textContent = concept.characteristics;
             Elements.viewExamples.textContent = concept.examples;
             Elements.viewNonExamples.textContent = concept.nonExamples;
-
             showElement(Elements.frayerView);
             isDetailMode = true;
         } else {
@@ -465,7 +571,6 @@ function updateView() {
         }
     }
 
-    // Toggle Mobile CSS Classes
     if (isDetailMode) {
         mainContent.classList.add('mobile-detail-active');
         if (Elements.backBtn) showElement(Elements.backBtn);
@@ -475,7 +580,6 @@ function updateView() {
     }
 }
 
-// --- Helpers ---
 function hideElement(el) {
     if (el) {
         el.hidden = true;
@@ -492,5 +596,3 @@ function showElement(el) {
 
 // Start
 init();
-
-
