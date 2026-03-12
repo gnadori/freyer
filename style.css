@@ -248,9 +248,11 @@ button {
     line-height: 1.6;
 }
 
-/* Adjust layout - Align headers to outer corners to avoid center overlap */
+/* Adjust layout - Align headers and text to outer corners to avoid center overlap */
 .frayer-cell.characteristics h4,
-.frayer-cell.non-examples h4 {
+.frayer-cell.non-examples h4,
+.frayer-cell.characteristics p,
+.frayer-cell.non-examples p {
     text-align: right;
 }
 
