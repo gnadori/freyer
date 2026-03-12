@@ -50,6 +50,7 @@ const Elements = {
     csvInput: document.getElementById('csvInput'),
     importBtn: document.getElementById('importBtn'), /* Enabled */
     exportBtn: document.getElementById('exportBtn'), /* Enabled */
+    deleteAllBtn: document.getElementById('deleteAllBtn'),
     addBtn: document.getElementById('addBtn'),
 
     searchInput: document.getElementById('searchInput'),
@@ -272,6 +273,9 @@ function setupEventListeners() {
     if (Elements.exportBtn) {
         Elements.exportBtn.addEventListener('click', handleCSVExport);
     }
+    if (Elements.deleteAllBtn) {
+        Elements.deleteAllBtn.addEventListener('click', handleDeleteAll);
+    }
 }
 
 // --- Logic functions ---
@@ -331,6 +335,41 @@ async function handleDelete() {
     } catch (err) {
         console.error("Delete error:", err);
         alert("Hiba a törlés során: " + err.message);
+    }
+}
+
+async function handleDeleteAll() {
+    if (!AppState.user) return;
+    if (AppState.concepts.length === 0) {
+        alert("Nincs mit törölni.");
+        return;
+    }
+
+    if (!confirm("Biztosan törölni szeretné az ÖSSZES fogalmat? Ez a művelet nem visszavonható!")) return;
+
+    try {
+        const userConceptsRef = collection(db, 'users', AppState.user.uid, 'concepts');
+        let count = 0;
+        
+        // Delete all individually (Firestore Web SDK doesn't have a single collection delete method)
+        for (const concept of AppState.concepts) {
+            await deleteDoc(doc(userConceptsRef, concept.id));
+            count++;
+        }
+
+        // Reset UI
+        AppState.view = 'empty';
+        AppState.selectedConceptId = null;
+        AppState.isEditing = false;
+        AppState.originalName = null;
+        updateView();
+        
+        if (count > 0) {
+            alert(`Sikeresen törölve ${count} fogalom.`);
+        }
+    } catch (err) {
+        console.error("Delete all error:", err);
+        alert("Hiba az összes törlése során: " + err.message);
     }
 }
 
